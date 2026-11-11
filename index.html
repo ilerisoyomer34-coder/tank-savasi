@@ -49,6 +49,21 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
 .results div{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:12px 6px}
 .results b{display:block;font:26px/1.1 'Russo One',sans-serif;font-weight:400;margin-top:7px;color:var(--ink)}
 .newbest{display:none;color:#9be27f;font:14px/1 'Russo One',sans-serif;letter-spacing:.12em;margin-top:12px}
+.picks{margin:18px 0 0;text-align:left}
+.picks .lbl{display:block;margin:0 0 7px;color:var(--gold)}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.opt{font:inherit;color:var(--ink);text-align:left;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:5px}
+.opt b{font:14px/1.1 'Russo One',system-ui,sans-serif;font-weight:400}
+.opt small{color:var(--muted);font-size:11.5px;line-height:1.35}
+.opt.on{border-color:var(--gold);background:rgba(231,191,79,.14);box-shadow:inset 0 0 0 1px var(--gold)}
+.upgrades{display:grid;gap:10px;margin-top:20px;text-align:left}
+.upc{font:inherit;color:var(--ink);text-align:left;display:flex;align-items:center;gap:12px;width:100%;background:rgba(18,20,14,.8);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer}
+.upc:active{transform:scale(.98)}
+.upn{font:18px 'Russo One',system-ui,sans-serif;color:var(--gold);width:20px;text-align:center}
+.upt{flex:1;display:flex;flex-direction:column;gap:3px}
+.upt b{font:16px/1.1 'Russo One',system-ui,sans-serif;font-weight:400}
+.upt small{color:var(--muted);font-size:12.5px;line-height:1.35}
+.pips{font-size:11px;letter-spacing:2px;color:var(--gold);white-space:nowrap}
 @media (max-width:560px){.hud{padding:8px}.panel{padding:8px 10px}.stats b{font-size:16px}.ibtn{width:38px;height:38px}.btn{font-size:18px;padding:14px 34px}}
 </style>
 </head>
@@ -78,6 +93,12 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
       <div class="ctrl" id="ctrlKb"><span class="lbl">KLAVYE + FARE</span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> ya da ok tuşları ile sür · fare ile nişan al · <kbd>TIK</kbd> veya <kbd>BOŞLUK</kbd> ile ateş · <kbd>P</kbd> duraklat</div>
       <div class="ctrl" id="ctrlTouch"><span class="lbl">DOKUNMATİK</span>Sol başparmakla sür. Sağ başparmağı basılı tutunca ateş eder; sürüklersen nişan alırsın, sürüklemezsen en yakın düşmana kilitlenir.</div>
     </div>
+    <div class="picks">
+      <span class="lbl">TANK</span>
+      <div class="opts" id="tankOpts"></div>
+      <span class="lbl">HARİTA</span>
+      <div class="opts" id="mapOpts"></div>
+    </div>
     <div class="legend"><span><i class="sw" style="background:#5fbf5a"></i>Zırh onarımı</span><span><i class="sw" style="background:#4aa8e8"></i>Üçlü atış</span></div>
     <button class="btn" id="startBtn">BAŞLA</button>
     <div class="best" id="menuBest"></div>
@@ -94,6 +115,13 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
   </div>
 </div>
 
+<div class="screen" id="upScr">
+  <div class="card">
+    <h2>GÜÇLENDİR</h2>
+    <p class="sub">Dalgayı temizledin. Tankını geliştirmek için birini seç. Klavyede 1, 2 ya da 3 tuşu da çalışır.</p>
+    <div class="upgrades" id="upList"></div>
+  </div>
+</div>
 <div class="screen" id="overScr">
   <div class="card">
     <h2>TANKIN VURULDU</h2>
@@ -192,8 +220,43 @@ const CELL = 50;
 const GW = Math.ceil(WORLD.w / CELL), GH = Math.ceil(WORLD.h / CELL);
 const UNREACH = 65535;
 
-const PLAYER_DEF = { kind: 'player', player: true, r: 22, speed: 175, turn: 5.0, turretTurn: 10, hp: 100, fireRate: 0.3, bulletSpeed: 640, dmg: 25, spread: 0,
-  color: '#c9b26a', turretColor: '#d9c47e', dark: '#5e5228' };
+const TANKS = {
+  standart: { name: 'Standart', desc: 'Dengeli, her duruma uygun', r: 22, speed: 175, turn: 5.0, turretTurn: 10, hp: 100, fireRate: 0.3, bulletSpeed: 640, dmg: 25, color: '#c9b26a', turretColor: '#d9c47e', dark: '#5e5228' },
+  hafif: { name: 'Hafif', desc: 'Hızlı ve çevik, zırhı ince', r: 19, speed: 235, turn: 6.4, turretTurn: 13, hp: 70, fireRate: 0.24, bulletSpeed: 660, dmg: 18, color: '#8aa35a', turretColor: '#a3bd6c', dark: '#3c4a22' },
+  agir: { name: 'Ağır', desc: 'Yavaş, çok zırhlı, güçlü top', r: 26, speed: 125, turn: 3.6, turretTurn: 7, hp: 150, fireRate: 0.5, bulletSpeed: 620, dmg: 40, color: '#6d6f5f', turretColor: '#828470', dark: '#2a2b22' },
+};
+const MAPS = {
+  vadi: { name: 'Çöl Vadisi', desc: 'Açık alan, az siper', ground: '#8f7c4e', blobA: '112,96,56', blobB: '80,68,40', wallA: '#9c8a64', wallB: '#b8a77c', longWalls: 9, blocks: 3, crateClusters: 6, decos: 200, rockChance: 0.6 },
+  sehir: { name: 'Şehir Harabesi', desc: 'Dar sokaklar, çok duvar', ground: '#4b4a46', blobA: '74,72,66', blobB: '50,50,46', wallA: '#5c5f57', wallB: '#7a7e73', longWalls: 17, blocks: 10, crateClusters: 14, decos: 120, rockChance: 0.7 },
+  orman: { name: 'Orman Açıklığı', desc: 'Bol siper, ağaçlık', ground: '#3f5232', blobA: '54,80,40', blobB: '34,58,28', wallA: '#6b5a44', wallB: '#86735a', longWalls: 9, blocks: 5, crateClusters: 9, decos: 260, rockChance: 0.2 },
+};
+const UPS = [
+  { k: 'motor', t: 'Motor', d: 'Hız ve dönüş hızı +%12' },
+  { k: 'zirh', t: 'Zırh', d: 'Maksimum zırh +25, mevcut zırh da artar' },
+  { k: 'namlu', t: 'Namlu', d: 'Mermi hasarı +%20' },
+  { k: 'atis', t: 'Atış hızı', d: 'Yeniden doldurma süresi −%12' },
+  { k: 'taret', t: 'Taret', d: 'Taret dönüş hızı +%20' },
+];
+const UPS_MAX = 4;
+const loadout = { tank: 'standart', map: 'vadi' };
+let upLv = { motor: 0, zirh: 0, namlu: 0, atis: 0, taret: 0 };
+let curMap = MAPS.vadi;
+let pendingUpgrade = false;
+function playerDef() {
+  const b = TANKS[loadout.tank];
+  return { kind: 'player', player: true, r: b.r, speed: b.speed, turn: b.turn, turretTurn: b.turretTurn, hp: b.hp, fireRate: b.fireRate, bulletSpeed: b.bulletSpeed, dmg: b.dmg, spread: 0, color: b.color, turretColor: b.turretColor, dark: b.dark };
+}
+function applyLoadout(fresh) {
+  const b = TANKS[loadout.tank], L = upLv, p = player;
+  p.speed = b.speed * (1 + 0.12 * L.motor);
+  p.turn = b.turn * (1 + 0.12 * L.motor);
+  p.turretTurn = b.turretTurn * (1 + 0.2 * L.taret);
+  p.dmg = Math.round(b.dmg * (1 + 0.2 * L.namlu));
+  p.fireRate = b.fireRate * Math.pow(0.88, L.atis);
+  const nm = b.hp + 25 * L.zirh, d = nm - p.maxHp;
+  p.maxHp = nm;
+  p.hp = fresh ? nm : p.hp + d;
+}
 const ENEMY_DEFS = {
   normal: { kind: 'normal', r: 22, speed: 92, turn: 2.6, turretTurn: 2.4, hp: 60, fireRate: 1.7, bulletSpeed: 380, dmg: 12, spread: 0.06, engage: 430, lead: 0.5, score: 100,
     color: '#a8432e', turretColor: '#bb553b', dark: '#4f1d12' },
@@ -232,6 +295,7 @@ const sticks = {
 
 addEventListener('keydown', e => {
   keys[e.code] = true;
+  if (state === 'upgrade' && /^Digit[1-3]$/.test(e.code)) pickUpgrade(Number(e.code.slice(-1)) - 1);
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.code === 'KeyP' || e.code === 'Escape') { if (state === 'play') pause(); else if (state === 'paused') resume(); }
   if (e.code === 'Enter') { if (state === 'menu' || state === 'over') startGame(); else if (state === 'paused') resume(); }
@@ -319,6 +383,7 @@ function lineOfSight(x1, y1, x2, y2) {
 
 // ---------------- Harita ----------------
 function genMap() {
+  const M = curMap;
   walls = []; decos = [];
   const cx = WORLD.w / 2, cy = WORLD.h / 2;
   function free(x, y, w, h, padWall, padCrate) {
@@ -331,7 +396,7 @@ function genMap() {
     return true;
   }
   let tries = 0, n = 0;
-  while (n < 15 && tries < 800) {
+  while (n < M.longWalls && tries < 800) {
     tries++;
     const horiz = Math.random() < 0.5, len = rand(130, 300), th = rand(34, 44);
     const w = horiz ? len : th, h = horiz ? th : len;
@@ -339,14 +404,14 @@ function genMap() {
     if (free(x, y, w, h, 95, 95)) { walls.push({ x, y, w, h, type: 'wall' }); n++; }
   }
   tries = 0; n = 0;
-  while (n < 7 && tries < 600) {
+  while (n < M.blocks && tries < 600) {
     tries++;
     const s = rand(70, 100), x = rand(60, WORLD.w - 60 - s), y = rand(60, WORLD.h - 60 - s);
     if (free(x, y, s, s, 95, 95)) { walls.push({ x, y, w: s, h: s, type: 'wall' }); n++; }
   }
   const CR = 40, offs = [[0, 0], [42, 0], [0, 42], [42, 42], [84, 0], [84, 42], [0, 84]];
   tries = 0; n = 0;
-  while (n < 12 && tries < 600) {
+  while (n < M.crateClusters && tries < 600) {
     tries++;
     const ox = rand(80, WORLD.w - 200), oy = rand(80, WORLD.h - 200);
     const cnt = 2 + ((Math.random() * 3) | 0);
@@ -360,9 +425,9 @@ function genMap() {
     }
     if (placed) n++;
   }
-  for (let i = 0; i < 170; i++) {
+  for (let i = 0; i < M.decos; i++) {
     const x = rand(20, WORLD.w - 20), y = rand(20, WORLD.h - 20);
-    if (Math.random() < 0.45) decos.push({ t: 'rock', x, y, r: rand(3, 9), a: rand(0, TAU) });
+    if (Math.random() < M.rockChance) decos.push({ t: 'rock', x, y, r: rand(3, 9), a: rand(0, TAU) });
     else decos.push({ t: 'grass', x, y, s: rand(5, 10), a: rand(-0.4, 0.4) });
   }
   blockedDirty = true;
@@ -372,10 +437,10 @@ function makeGroundPattern() {
   const s = 256, c = document.createElement('canvas');
   c.width = c.height = s;
   const g = c.getContext('2d');
-  g.fillStyle = '#4b4a36'; g.fillRect(0, 0, s, s);
+  g.fillStyle = curMap.ground; g.fillRect(0, 0, s, s);
   for (let i = 0; i < 16; i++) {
     const x = Math.random() * s, y = Math.random() * s, r = rand(24, 70);
-    const col = Math.random() < 0.5 ? '96,90,62' : '54,55,39';
+    const col = Math.random() < 0.5 ? curMap.blobA : curMap.blobB;
     for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) {
       const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
       gr.addColorStop(0, `rgba(${col},0.4)`); gr.addColorStop(1, `rgba(${col},0)`);
@@ -694,7 +759,7 @@ function updateWaves(dt) {
       else spawnTimer = 0.3;
     }
     if (!spawnQueue.length && alive === 0) {
-      waveState = 'break'; breakT = 3.4;
+      waveState = 'break'; breakT = 3.4; pendingUpgrade = true;
       const bonus = wave * 50;
       score += bonus;
       const heal = Math.min(20, player.maxHp - player.hp);
@@ -846,17 +911,21 @@ function updateFx(dt) {
 function newWorld() {
   genMap();
   tanks = []; bullets = []; particles = []; pickups = []; decals = []; scorches = []; floaters = [];
-  player = makeTank(PLAYER_DEF, WORLD.w / 2, WORLD.h / 2, -Math.PI / 2);
+  player = makeTank(playerDef(), WORLD.w / 2, WORLD.h / 2, -Math.PI / 2);
+  applyLoadout(true);
   tanks.push(player);
   cam.x = player.x; cam.y = player.y;
   buildFlow();
 }
 function startGame() {
   Snd.init();
+  curMap = MAPS[loadout.map];
+  groundPat = makeGroundPattern();
+  upLv = { motor: 0, zirh: 0, namlu: 0, atis: 0, taret: 0 };
   newWorld();
   score = 0; wave = 0; kills = 0; power.triple = 0;
   waveState = 'break'; breakT = 1.2; spawnQueue = []; spawnTimer = 0; flowTimer = 0;
-  shake = 0; hurtFlash = 0; banner.t = 0;
+  shake = 0; hurtFlash = 0; banner.t = 0; pendingUpgrade = false;
   releaseAll();
   state = 'play';
   show(null);
@@ -908,6 +977,7 @@ function update(dt) {
   updateBullets(dt);
   updatePickups(dt);
   updateWaves(dt);
+  if (pendingUpgrade) { pendingUpgrade = false; openUpgrade(); }
   updateFx(dt);
   tanks = tanks.filter(t => !t.dead || t.player);
   updateCamera(dt);
@@ -1041,8 +1111,8 @@ function drawWalls() {
   for (const w of walls) {
     if (!inView(w.x + w.w / 2, w.y + w.h / 2, Math.max(w.w, w.h))) continue;
     if (w.type === 'wall') {
-      ctx.fillStyle = '#5c5f57'; ctx.fillRect(w.x, w.y, w.w, w.h);
-      ctx.fillStyle = '#7a7e73'; ctx.fillRect(w.x + 4, w.y + 4, w.w - 8, w.h - 8);
+      ctx.fillStyle = curMap.wallA; ctx.fillRect(w.x, w.y, w.w, w.h);
+      ctx.fillStyle = curMap.wallB; ctx.fillRect(w.x + 4, w.y + 4, w.w - 8, w.h - 8);
       ctx.fillStyle = 'rgba(255,255,255,0.09)'; ctx.fillRect(w.x + 4, w.y + 4, w.w - 8, 3);
       ctx.strokeStyle = 'rgba(40,42,36,0.55)'; ctx.lineWidth = 2; ctx.beginPath();
       if (w.w > w.h * 1.5) { for (let x = w.x + w.h * 1.6; x < w.x + w.w - 12; x += w.h * 1.6) { ctx.moveTo(x, w.y + 4); ctx.lineTo(x, w.y + w.h - 4); } }
@@ -1250,6 +1320,52 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+// ---------------- Güçlendirme ve seçim ----------------
+let upChoices = [];
+function openUpgrade() {
+  const avail = UPS.filter(u => upLv[u.k] < UPS_MAX);
+  if (!avail.length) return;
+  for (let i = avail.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const tmp = avail[i]; avail[i] = avail[j]; avail[j] = tmp; }
+  upChoices = avail.slice(0, 3);
+  const box = $('upList');
+  box.innerHTML = '';
+  upChoices.forEach((u, i) => {
+    const b = document.createElement('button');
+    b.className = 'upc';
+    const pips = '■'.repeat(upLv[u.k]) + '□'.repeat(UPS_MAX - upLv[u.k]);
+    b.innerHTML = `<span class="upn">${i + 1}</span><span class="upt"><b>${u.t}</b><small>${u.d}</small></span><span class="pips">${pips}</span>`;
+    b.addEventListener('click', () => pickUpgrade(i));
+    box.appendChild(b);
+  });
+  releaseAll();
+  state = 'upgrade';
+  show('upScr');
+}
+function pickUpgrade(i) {
+  const u = upChoices[i];
+  if (state !== 'upgrade' || !u) return;
+  upLv[u.k]++;
+  applyLoadout(false);
+  state = 'play';
+  show(null);
+  last = performance.now();
+}
+const TANK_ORDER = ['standart', 'hafif', 'agir'];
+const MAP_ORDER = ['vadi', 'sehir', 'orman'];
+function optBtn(title, desc, on, fn) {
+  const b = document.createElement('button');
+  b.className = 'opt' + (on ? ' on' : '');
+  b.innerHTML = `<b>${title}</b><small>${desc}</small>`;
+  b.addEventListener('click', fn);
+  return b;
+}
+function renderPicks() {
+  const tb = $('tankOpts'), mb = $('mapOpts');
+  tb.innerHTML = ''; mb.innerHTML = '';
+  for (const k of TANK_ORDER) tb.appendChild(optBtn(TANKS[k].name, TANKS[k].desc, loadout.tank === k, () => { loadout.tank = k; renderPicks(); }));
+  for (const k of MAP_ORDER) mb.appendChild(optBtn(MAPS[k].name, MAPS[k].desc, loadout.map === k, () => { loadout.map = k; renderPicks(); }));
+}
+
 // ---------------- Arayüz ----------------
 const ICON_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
@@ -1266,6 +1382,7 @@ paintMute();
 resize();
 groundPat = makeGroundPattern();
 newWorld();
+renderPicks();
 show('menu');
 requestAnimationFrame(frame);
 

@@ -10,6 +10,9 @@ Tarayıcıda oynanan, yukarıdan bakışlı, dalga tabanlı bir tank oyunu. Kuru
   - **Yeşil kutu:** zırh onarımı
   - **Mavi kutu:** 10 saniyelik üçlü atış
 - Düşman türleri: standart (kırmızı), hızlı (turuncu), ağır çift namlulu (bordo).
+- Dalga temizlenince 3 güçlendirmeden birini seç: motor, zırh, namlu, atış hızı, taret. Her biri 4 kez yükseltilebilir.
+- Üç tank var: **Standart** (dengeli), **Hafif** (hızlı, zırhı ince), **Ağır** (yavaş, çok zırhlı, güçlü top).
+- Üç harita var: **Çöl Vadisi**, **Şehir Harabesi**, **Orman Açıklığı**.
 - En iyi skor tarayıcıda saklanır.
 
 ## Kontroller
