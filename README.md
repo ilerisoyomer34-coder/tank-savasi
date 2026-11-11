@@ -13,6 +13,10 @@ Tarayıcıda oynanan, yukarıdan bakışlı, dalga tabanlı bir tank oyunu. Kuru
 - Dalga temizlenince 3 güçlendirmeden birini seç: motor, zırh, namlu, atış hızı, taret. Her biri 4 kez yükseltilebilir.
 - Üç tank var: **Standart** (dengeli), **Hafif** (hızlı, zırhı ince), **Ağır** (yavaş, çok zırhlı, güçlü top).
 - Üç harita var: **Çöl Vadisi**, **Şehir Harabesi**, **Orman Açıklığı**.
+- **Kampanya:** 60 bölüm. Her bölümde belli sayıda tank yok etmen gerekiyor (bölüm 1'de 6, bölüm 60'ta 42). Bölüm bitince bir sonrakine geçilir.
+- **Para:** Düşman öldürünce ve bölüm bitirince kazanılır. Tarayıcıda saklanır.
+- **Garaj:** Parayla yeni tank ve başlangıç güçlendirmesi alınır. Tanklar bölüm şartına da bağlı.
+- **Serbest oyun:** Kampanya dışında, seçtiğin tank ve haritayla sonsuz dalgalar.
 - En iyi skor tarayıcıda saklanır.
 
 ## Kontroller

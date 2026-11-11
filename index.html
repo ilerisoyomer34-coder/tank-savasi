@@ -64,6 +64,9 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
 .upt b{font:16px/1.1 'Russo One',system-ui,sans-serif;font-weight:400}
 .upt small{color:var(--muted);font-size:12.5px;line-height:1.35}
 .pips{font-size:11px;letter-spacing:2px;color:var(--gold);white-space:nowrap}
+.gsec{display:block;margin:18px 0 8px;text-align:left;color:var(--gold)}
+.gupg{display:grid;gap:8px;text-align:left}
+.opt.lock{opacity:.5}
 @media (max-width:560px){.hud{padding:8px}.panel{padding:8px 10px}.stats b{font-size:16px}.ibtn{width:38px;height:38px}.btn{font-size:18px;padding:14px 34px}}
 </style>
 </head>
@@ -74,8 +77,9 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
   <div class="panel hpwrap">
     <div class="lbl">ZIRH</div>
     <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
-    <div class="stats"><span class="lbl">PUAN</span><b id="score">0</b><span class="lbl">DALGA</span><b id="wave">1</b></div>
+    <div class="stats"><span class="lbl">PUAN</span><b id="score">0</b><span class="lbl" id="wlbl">DALGA</span><b id="wave">1</b></div>
     <div class="power" id="power"></div>
+    <div class="power" id="goal"></div>
   </div>
   <div class="btns">
     <button class="ibtn" id="muteBtn" aria-label="Sesi aç/kapat"></button>
@@ -96,11 +100,12 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
     <div class="picks">
       <span class="lbl">TANK</span>
       <div class="opts" id="tankOpts"></div>
-      <span class="lbl">HARİTA</span>
+      <span class="lbl">HARİTA (yalnız serbest oyun)</span>
       <div class="opts" id="mapOpts"></div>
     </div>
     <div class="legend"><span><i class="sw" style="background:#5fbf5a"></i>Zırh onarımı</span><span><i class="sw" style="background:#4aa8e8"></i>Üçlü atış</span></div>
-    <button class="btn" id="startBtn">BAŞLA</button>
+    <button class="btn" id="startBtn">KAMPANYA</button>
+    <div class="row" style="margin-top:14px"><button class="btn ghost" id="freeBtn">SERBEST OYUN</button><button class="btn ghost" id="garBtn">GARAJ</button></div>
     <div class="best" id="menuBest"></div>
   </div>
 </div>
@@ -111,10 +116,34 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
     <div class="row">
       <button class="btn" id="resumeBtn">DEVAM ET</button>
       <button class="btn ghost" id="restartBtn">YENİDEN BAŞLA</button>
+      <button class="btn ghost" id="pauseMenuBtn">MENÜ</button>
     </div>
   </div>
 </div>
 
+<div class="screen" id="garScr">
+  <div class="card">
+    <h2>GARAJ</h2>
+    <p class="sub">Para: <b id="garCoins">0</b></p>
+    <span class="lbl gsec">TANKLAR</span>
+    <div class="opts" id="garTanks"></div>
+    <span class="lbl gsec">GÜÇLENDİRMELER (her yeni oyunda bu seviyelerle başlarsın)</span>
+    <div class="gupg" id="garUpg"></div>
+    <div class="row"><button class="btn ghost" id="garBack">GERİ</button></div>
+  </div>
+</div>
+<div class="screen" id="lvlScr">
+  <div class="card">
+    <h2 id="lvlTitle">BÖLÜM</h2>
+    <p class="sub" id="lvlSub"></p>
+    <div class="results">
+      <div><span class="lbl">KAZANÇ</span><b id="lvlGain">0</b></div>
+      <div><span class="lbl">TOPLAM PARA</span><b id="lvlCoins">0</b></div>
+      <div><span class="lbl">İMHA</span><b id="lvlKills">0</b></div>
+    </div>
+    <div class="row"><button class="btn" id="nextBtn">SONRAKİ BÖLÜM</button><button class="btn ghost" id="lvlMenuBtn">MENÜ</button></div>
+  </div>
+</div>
 <div class="screen" id="upScr">
   <div class="card">
     <h2>GÜÇLENDİR</h2>
@@ -133,7 +162,8 @@ kbd{font:11px/1 'Russo One',sans-serif;background:rgba(255,255,255,.1);border:1p
     </div>
     <div class="best" id="goBest"></div>
     <div class="row">
-      <button class="btn" id="againBtn">TEKRAR OYNA</button>
+      <button class="btn" id="againBtn">TEKRAR DENE</button>
+      <button class="btn ghost" id="menuBtn">MENÜ</button>
     </div>
   </div>
 </div>
@@ -221,9 +251,12 @@ const GW = Math.ceil(WORLD.w / CELL), GH = Math.ceil(WORLD.h / CELL);
 const UNREACH = 65535;
 
 const TANKS = {
-  standart: { name: 'Standart', desc: 'Dengeli, her duruma uygun', r: 22, speed: 175, turn: 5.0, turretTurn: 10, hp: 100, fireRate: 0.3, bulletSpeed: 640, dmg: 25, color: '#c9b26a', turretColor: '#d9c47e', dark: '#5e5228' },
-  hafif: { name: 'Hafif', desc: 'Hızlı ve çevik, zırhı ince', r: 19, speed: 235, turn: 6.4, turretTurn: 13, hp: 70, fireRate: 0.24, bulletSpeed: 660, dmg: 18, color: '#8aa35a', turretColor: '#a3bd6c', dark: '#3c4a22' },
-  agir: { name: 'Ağır', desc: 'Yavaş, çok zırhlı, güçlü top', r: 26, speed: 125, turn: 3.6, turretTurn: 7, hp: 150, fireRate: 0.5, bulletSpeed: 620, dmg: 40, color: '#6d6f5f', turretColor: '#828470', dark: '#2a2b22' },
+  standart: { name: 'Standart', desc: 'Dengeli, her duruma uygun', price: 0, need: 1, r: 22, speed: 175, turn: 5.0, turretTurn: 10, hp: 100, fireRate: 0.3, bulletSpeed: 640, dmg: 25, color: '#c9b26a', turretColor: '#d9c47e', dark: '#5e5228' },
+  hafif: { name: 'Hafif', desc: 'Hızlı ve çevik, zırhı ince', price: 300, need: 3, r: 19, speed: 235, turn: 6.4, turretTurn: 13, hp: 70, fireRate: 0.24, bulletSpeed: 660, dmg: 18, color: '#8aa35a', turretColor: '#a3bd6c', dark: '#3c4a22' },
+  agir: { name: 'Ağır', desc: 'Yavaş, çok zırhlı, güçlü top', price: 500, need: 6, r: 26, speed: 125, turn: 3.6, turretTurn: 7, hp: 150, fireRate: 0.5, bulletSpeed: 620, dmg: 40, color: '#6d6f5f', turretColor: '#828470', dark: '#2a2b22' },
+  cift: { name: 'Çift Namlu', desc: 'İki namlu, hızlı ateş, orta zırh', price: 600, need: 8, r: 22, speed: 185, turn: 5.2, turretTurn: 12, hp: 110, fireRate: 0.2, bulletSpeed: 640, dmg: 14, barrels: 2, color: '#7c8f9c', turretColor: '#93a6b3', dark: '#2e3a42' },
+  keskin: { name: 'Keskin Nişancı', desc: 'Uzun menzil, tek atışta ağır hasar, yavaş ateş', price: 800, need: 12, r: 20, speed: 160, turn: 4.6, turretTurn: 9, hp: 85, fireRate: 0.8, bulletSpeed: 1000, dmg: 60, color: '#4f6b4a', turretColor: '#637f5c', dark: '#26341f' },
+  kaplan: { name: 'Kaplan', desc: 'Çok kalın zırh, yavaş ama dayanıklı', price: 1500, need: 25, r: 28, speed: 110, turn: 3.0, turretTurn: 6, hp: 220, fireRate: 0.55, bulletSpeed: 600, dmg: 35, color: '#8a6a3a', turretColor: '#a07e48', dark: '#3d2c15' },
 };
 const MAPS = {
   vadi: { name: 'Çöl Vadisi', desc: 'Açık alan, az siper', ground: '#8f7c4e', blobA: '112,96,56', blobB: '80,68,40', wallA: '#9c8a64', wallB: '#b8a77c', longWalls: 9, blocks: 3, crateClusters: 6, decos: 200, rockChance: 0.6 },
@@ -244,7 +277,7 @@ let curMap = MAPS.vadi;
 let pendingUpgrade = false;
 function playerDef() {
   const b = TANKS[loadout.tank];
-  return { kind: 'player', player: true, r: b.r, speed: b.speed, turn: b.turn, turretTurn: b.turretTurn, hp: b.hp, fireRate: b.fireRate, bulletSpeed: b.bulletSpeed, dmg: b.dmg, spread: 0, color: b.color, turretColor: b.turretColor, dark: b.dark };
+  return { kind: 'player', player: true, r: b.r, speed: b.speed, turn: b.turn, turretTurn: b.turretTurn, hp: b.hp, fireRate: b.fireRate, bulletSpeed: b.bulletSpeed, dmg: b.dmg, spread: 0, barrels: b.barrels || 1, color: b.color, turretColor: b.turretColor, dark: b.dark };
 }
 function applyLoadout(fresh) {
   const b = TANKS[loadout.tank], L = upLv, p = player;
@@ -298,7 +331,7 @@ addEventListener('keydown', e => {
   if (state === 'upgrade' && /^Digit[1-3]$/.test(e.code)) pickUpgrade(Number(e.code.slice(-1)) - 1);
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.code === 'KeyP' || e.code === 'Escape') { if (state === 'play') pause(); else if (state === 'paused') resume(); }
-  if (e.code === 'Enter') { if (state === 'menu' || state === 'over') startGame(); else if (state === 'paused') resume(); }
+  if (e.code === 'Enter') { if (state === 'menu') startCampaign(save.level); else if (state === 'over') startGame(); else if (state === 'paused') resume(); }
   if (/^(Key[WASD]|Arrow|Space)/.test(e.code)) usingTouch = false;
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -660,11 +693,11 @@ function separateTanks() {
 }
 
 function fire(t) {
-  const n = t.player && power.triple > 0 ? 3 : 1;
+  const n = t.player ? (power.triple > 0 ? 3 : (t.barrels || 1)) : 1;
   const tip = t.r * (t.kind === 'fast' ? 1.4 : 1.75);
   const bx = t.x + Math.cos(t.turret) * tip, by = t.y + Math.sin(t.turret) * tip;
   for (let k = 0; k < n; k++) {
-    const a = t.turret + (n === 3 ? (k - 1) * 0.17 : 0) + rand(-t.spread, t.spread);
+    const a = t.turret + (n === 3 ? (k - 1) * 0.17 : n === 2 ? (k - 0.5) * 0.1 : 0) + rand(-t.spread, t.spread);
     bullets.push({ x: bx, y: by, vx: Math.cos(a) * t.bulletSpeed, vy: Math.sin(a) * t.bulletSpeed, owner: t.player ? 'p' : 'e',
       dmg: t.dmg, life: 1.6, r: t.kind === 'heavy' ? 6 : 4 });
   }
@@ -693,7 +726,7 @@ function damageTank(t, dmg, b) {
 }
 
 function killEnemy(t) {
-  t.dead = true; kills++; score += t.score;
+  t.dead = true; kills++; score += t.score; save.coins += Math.round(t.score / 25);
   explosion(t.x, t.y, t.kind === 'heavy' ? 1.35 : t.kind === 'fast' ? 0.8 : 1);
   floater(t.x, t.y - t.r - 6, '+' + t.score, '#f3d98a');
   dropPickup(t.x, t.y, 0.24);
@@ -706,7 +739,7 @@ function killPlayer() {
 
 function spawnEnemy(kind, pos) {
   const def = Object.assign({}, ENEMY_DEFS[kind]);
-  const k = wave - 1;
+  const k = mode === 'campaign' ? (curLevel - 1) * 0.6 + (wave - 1) * 0.4 : wave - 1;
   def.hp = Math.round(def.hp * (1 + 0.03 * k));
   def.fireRate = def.fireRate * Math.max(0.8, 1 - 0.02 * k);
   def.speed = def.speed * Math.min(1.15, 1 + 0.015 * k);
@@ -752,6 +785,7 @@ function updateWaves(dt) {
     let alive = 0;
     for (const t of tanks) if (!t.player && !t.dead) alive++;
     const cap = Math.min(2 + Math.floor(wave / 2), 6);
+    if (kills + alive >= levelTarget) spawnQueue.length = 0;
     if (spawnQueue.length && alive < cap && spawnTimer <= 0) {
       const kind = spawnQueue[spawnQueue.length - 1];
       const pos = findSpawn(ENEMY_DEFS[kind].r);
@@ -771,7 +805,7 @@ function updateWaves(dt) {
     breakT -= dt;
     if (breakT <= 0) {
       wave++;
-      spawnQueue = waveList(wave);
+      spawnQueue = waveList(mode === 'campaign' ? curLevel : wave);
       waveState = 'fight'; spawnTimer = 0.4;
       showBanner(`DALGA ${wave}`, wave === 1 ? 'Düşman tankları yaklaşıyor' : `${spawnQueue.length} düşman tankı`);
       Snd.play('wave');
@@ -919,9 +953,10 @@ function newWorld() {
 }
 function startGame() {
   Snd.init();
-  curMap = MAPS[loadout.map];
+  curMap = MAPS[mode === 'campaign' ? levelDef(curLevel).map : loadout.map];
   groundPat = makeGroundPattern();
-  upLv = { motor: 0, zirh: 0, namlu: 0, atis: 0, taret: 0 };
+  upLv = Object.assign({}, save.garage);
+  levelTarget = mode === 'campaign' ? levelDef(curLevel).target : Infinity;
   newWorld();
   score = 0; wave = 0; kills = 0; power.triple = 0;
   waveState = 'break'; breakT = 1.2; spawnQueue = []; spawnTimer = 0; flowTimer = 0;
@@ -936,19 +971,20 @@ function pause() { if (state !== 'play') return; state = 'paused'; releaseAll();
 function resume() { if (state !== 'paused') return; state = 'play'; show(null); last = performance.now(); }
 function gameOver() {
   state = 'over';
+  writeSave();
   const isNew = score > best && score > 0;
   if (isNew) { best = score; try { localStorage.setItem('tankSavasiBest', String(best)); } catch (e) {} }
   $('goScore').textContent = score;
   $('goWave').textContent = wave;
   $('goKills').textContent = kills;
   $('goNew').style.display = isNew ? 'block' : 'none';
-  $('goBest').textContent = 'En iyi skor: ' + best;
+  $('goBest').textContent = (mode === 'campaign' ? `Bölüm ${curLevel} · ${kills}/${levelTarget} imha · ` : '') + 'En iyi skor: ' + best;
   show('overScr');
 }
 function show(id) {
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('show', s.id === id);
   $('hud').classList.toggle('show', state === 'play' || state === 'paused');
-  if (id === 'menu') $('menuBest').textContent = best > 0 ? 'En iyi skor: ' + best : '';
+  if (id === 'menu') renderMenuInfo();
 }
 
 let hudCache = {};
@@ -959,7 +995,9 @@ function updateHUD() {
   const w = pct.toFixed(1) + '%';
   if (hudCache.hp !== w) { hudCache.hp = w; hpFill.style.width = w; hpFill.classList.toggle('low', pct < 30); }
   setText('score', String(score));
-  setText('wave', String(Math.max(1, wave)));
+  setText('wlbl', mode === 'campaign' ? 'BÖLÜM' : 'DALGA');
+  setText('wave', String(mode === 'campaign' ? curLevel : Math.max(1, wave)));
+  setText('goal', mode === 'campaign' ? `HEDEF ${kills}/${levelTarget}` : '');
   setText('power', power.triple > 0 ? `ÜÇLÜ ATIŞ · ${Math.ceil(power.triple)} sn` : '');
 }
 
@@ -977,7 +1015,11 @@ function update(dt) {
   updateBullets(dt);
   updatePickups(dt);
   updateWaves(dt);
-  if (pendingUpgrade) { pendingUpgrade = false; openUpgrade(); }
+  if (pendingUpgrade) {
+    pendingUpgrade = false;
+    writeSave();
+    if (mode === 'campaign' && kills >= levelTarget) levelComplete(); else openUpgrade();
+  }
   updateFx(dt);
   tanks = tanks.filter(t => !t.dead || t.player);
   updateCamera(dt);
@@ -1350,7 +1392,7 @@ function pickUpgrade(i) {
   show(null);
   last = performance.now();
 }
-const TANK_ORDER = ['standart', 'hafif', 'agir'];
+const TANK_ORDER = ['standart', 'hafif', 'cift', 'agir', 'keskin', 'kaplan'];
 const MAP_ORDER = ['vadi', 'sehir', 'orman'];
 function optBtn(title, desc, on, fn) {
   const b = document.createElement('button');
@@ -1362,8 +1404,93 @@ function optBtn(title, desc, on, fn) {
 function renderPicks() {
   const tb = $('tankOpts'), mb = $('mapOpts');
   tb.innerHTML = ''; mb.innerHTML = '';
-  for (const k of TANK_ORDER) tb.appendChild(optBtn(TANKS[k].name, TANKS[k].desc, loadout.tank === k, () => { loadout.tank = k; renderPicks(); }));
+  for (const k of TANK_ORDER) {
+    const t = TANKS[k], own = save.owned.includes(k);
+    const desc = own ? t.desc : (save.level < t.need ? `Bölüm ${t.need}'de açılır` : `Garajdan al · ${t.price} para`);
+    const b = optBtn(t.name, desc, own && loadout.tank === k, () => { if (own) { loadout.tank = k; renderPicks(); } });
+    if (!own) b.classList.add('lock');
+    tb.appendChild(b);
+  }
   for (const k of MAP_ORDER) mb.appendChild(optBtn(MAPS[k].name, MAPS[k].desc, loadout.map === k, () => { loadout.map = k; renderPicks(); }));
+}
+
+// ---------------- Kampanya, kayıt, garaj ----------------
+const GARAGE_MAX = 2;
+const UPG_COST = l => 200 * (l + 1);
+const SAVE_KEY = 'tankSavasiSave';
+let save = { level: 1, coins: 0, owned: ['standart'], garage: { motor: 0, zirh: 0, namlu: 0, atis: 0, taret: 0 } };
+let mode = 'free', curLevel = 0, levelTarget = Infinity;
+function loadSave() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (d) {
+      save.level = clamp((d.level | 0) || 1, 1, 60);
+      save.coins = Math.max(0, d.coins | 0);
+      save.owned = Array.isArray(d.owned) ? d.owned.filter(k => TANKS[k]) : [];
+      if (!save.owned.includes('standart')) save.owned.unshift('standart');
+      if (d.garage) for (const k in save.garage) save.garage[k] = clamp((d.garage[k] | 0), 0, GARAGE_MAX);
+    }
+  } catch (e) {}
+  if (!save.owned.includes(loadout.tank)) loadout.tank = 'standart';
+}
+function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+function levelDef(n) { return { map: MAP_ORDER[(n - 1) % 3], target: 6 + Math.floor(n * 0.6) }; }
+function startCampaign(n) { mode = 'campaign'; curLevel = clamp(n, 1, 60); startGame(); }
+function startFree() { mode = 'free'; curLevel = 0; startGame(); }
+function levelComplete() {
+  state = 'levelDone';
+  releaseAll();
+  const gain = 60 + curLevel * 15;
+  save.coins += gain;
+  if (curLevel >= save.level) save.level = Math.min(60, curLevel + 1);
+  writeSave();
+  $('lvlTitle').textContent = curLevel >= 60 ? 'KAMPANYA BİTTİ' : `BÖLÜM ${curLevel} TAMAM`;
+  $('lvlSub').textContent = curLevel >= 60 ? 'Tüm 60 bölümü bitirdin.' : 'Bir sonraki bölüm biraz daha zor olacak.';
+  $('lvlGain').textContent = '+' + gain;
+  $('lvlCoins').textContent = save.coins;
+  $('lvlKills').textContent = kills;
+  $('nextBtn').style.display = curLevel >= 60 ? 'none' : '';
+  show('lvlScr');
+}
+function toMenu() { state = 'menu'; releaseAll(); renderPicks(); show('menu'); }
+function renderMenuInfo() {
+  $('menuBest').textContent = `Para: ${save.coins} · Bölüm ${save.level}/60` + (best > 0 ? ` · En iyi skor: ${best}` : '');
+}
+function buyTank(k) {
+  const t = TANKS[k];
+  if (save.owned.includes(k) || save.level < t.need || save.coins < t.price) return;
+  save.coins -= t.price; save.owned.push(k); writeSave();
+  renderGarage();
+}
+function buyUpg(k) {
+  const l = save.garage[k], cost = UPG_COST(l);
+  if (l >= GARAGE_MAX || save.coins < cost) return;
+  save.coins -= cost; save.garage[k]++; writeSave();
+  renderGarage();
+}
+function renderGarage() {
+  $('garCoins').textContent = save.coins;
+  const tb = $('garTanks'); tb.innerHTML = '';
+  for (const k of TANK_ORDER) {
+    const t = TANKS[k], own = save.owned.includes(k);
+    let desc, fn = () => {}, lock = false;
+    if (own) { desc = (loadout.tank === k ? 'Seçili · ' : 'Seçmek için dokun · ') + t.desc; fn = () => { loadout.tank = k; renderGarage(); }; }
+    else if (save.level < t.need) { desc = `Bölüm ${t.need}'de açılır`; lock = true; }
+    else { desc = `${t.price} para · ${t.desc}`; fn = () => buyTank(k); }
+    const b = optBtn(t.name, desc, own && loadout.tank === k, fn);
+    if (lock) b.classList.add('lock');
+    tb.appendChild(b);
+  }
+  const ub = $('garUpg'); ub.innerHTML = '';
+  for (const u of UPS) {
+    const l = save.garage[u.k], cost = UPG_COST(l);
+    const b = document.createElement('button');
+    b.className = 'upc';
+    const pips = '■'.repeat(l) + '□'.repeat(GARAGE_MAX - l);
+    b.innerHTML = `<span class="upt"><b>${u.t}</b><small>${u.d}</small></span><span class="pips">${l >= GARAGE_MAX ? 'TAM' : pips + ' · ' + cost + ' para'}</span>`;
+    b.addEventListener('click', () => buyUpg(u.k));
+    ub.appendChild(b);
+  }
 }
 
 // ---------------- Arayüz ----------------
@@ -1372,16 +1499,24 @@ const ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 function paintMute() { $('muteBtn').innerHTML = Snd.muted ? ICON_OFF : ICON_ON; }
 $('muteBtn').addEventListener('click', () => { Snd.init(); Snd.toggle(); paintMute(); });
 $('pauseBtn').addEventListener('click', () => pause());
-$('startBtn').addEventListener('click', startGame);
+$('startBtn').addEventListener('click', () => startCampaign(save.level));
 $('againBtn').addEventListener('click', startGame);
 $('resumeBtn').addEventListener('click', resume);
 $('restartBtn').addEventListener('click', startGame);
+$('freeBtn').addEventListener('click', startFree);
+$('garBtn').addEventListener('click', () => { renderGarage(); show('garScr'); });
+$('garBack').addEventListener('click', toMenu);
+$('menuBtn').addEventListener('click', toMenu);
+$('pauseMenuBtn').addEventListener('click', toMenu);
+$('lvlMenuBtn').addEventListener('click', toMenu);
+$('nextBtn').addEventListener('click', () => startCampaign(curLevel + 1));
 if (coarse) $('controls').insertBefore($('ctrlTouch'), $('ctrlKb'));
 paintMute();
 
 resize();
 groundPat = makeGroundPattern();
 newWorld();
+loadSave();
 renderPicks();
 show('menu');
 requestAnimationFrame(frame);
